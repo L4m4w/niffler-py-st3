@@ -1,3 +1,4 @@
+import logging
 from wsgiref.util import application_uri
 
 import pytest
@@ -6,9 +7,12 @@ from selene.support.shared import browser
 from selenium.webdriver.chrome.options import Options
 from selenium import webdriver
 
+from models.user import UserData
 from pages.application import app
 from utils.test_data_factory import TestDataFactory
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 @pytest.fixture(scope="session", autouse=True)
 def browser_management(request):
@@ -47,15 +51,25 @@ def api_config(request):
         setattr(request.cls, 'FRONTEND_URL', "http://frontend.niffler.dc/")
         setattr(request.cls, 'AUTH_URL', "http://auth.niffler.dc:9000/")
 
-@pytest.fixture(scope='session')
-def test_data():
-    return TestDataFactory.generate_test_data(save_data=False)
+@pytest.fixture(scope="function")
+def data_factory():
+    factory = TestDataFactory()
+    logger.info("Test data factory initialized")
 
-@pytest.fixture(scope='session')
-def register_user(test_data):
-    username, password = test_data['user_data'][0]['username'], test_data['user_data'][0]['password']
+    yield factory
+
+    stats = factory.get_generation_stats()
+    logger.info(f"Test data generation stats: {stats}")
+
+@pytest.fixture(scope='function')
+def random_user(data_factory) -> UserData:
+    return data_factory.create_user_credentials_data()
+
+@pytest.fixture(scope='function')
+def register_user(random_user):
+    username, password = random_user.username, random_user.password
     app.register_page.open()
-    app.register_page.registration(**test_data['user_data'][0])
+    app.register_page.registration(username, password)
     assert app.register_page.check_registration_status()
     return username, password
 
