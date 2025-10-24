@@ -12,7 +12,7 @@ from selenium.webdriver.remote.webelement import WebElement
 
 class LoginPage(BasePage):
 
-    PAGE_URL = 'http://frontend.niffler.dc/login'
+    PAGE_URL = 'http://auth.niffler.dc:9000/login'
 
 
     def login(self, email, password):
