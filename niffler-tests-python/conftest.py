@@ -13,6 +13,7 @@ from clients.users_client import UsersHttpClient
 from e2e.web.conftest import random_user
 
 from clients.spends_client import SpendsHttpClient
+from models.spend import Category
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -38,7 +39,7 @@ def gateway_url(envs):
 @pytest.fixture(scope="session")
 def api_user(envs):
     # return os.getenv('TEST_USERNAME'), os.getenv('TEST_PASSWORD')
-    return 'Lamaw1234', 'Lamaw20021'
+    return 'Lamaw', 'Lamaw2002'
 
 @pytest.fixture(scope="function")
 def register(register_url, random_user):
@@ -136,16 +137,19 @@ def get_user_profile(users_client):
 def category(request, spends_client):
     category_name = request.param
     current_categories = spends_client.get_categories()
-    current_category_names = [category["name"] for category in current_categories]
+    current_category_names = [category.name for category in current_categories]
     if category_name not in current_category_names:
         spends_client.add_category(category_name)
+    return category_name
 
 @pytest.fixture(params=[])
 def spends(request, spends_client):
-    spend = spends_client.add_spends(request.param)
-    yield spend
-    try:
-        spends_client.remove_spends([spend['id']])
-    except Exception:
-        ...
+    spend_data = request.param
+
+    test_spend = spends_client.add_spends(spend_data)
+
+    yield test_spend
+    all_spends = spends_client.get_spends()
+    if test_spend.id in [spend.id for spend in all_spends]:
+        spends_client.remove_spends([test_spend.id])
 
