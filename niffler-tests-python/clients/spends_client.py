@@ -43,8 +43,15 @@ class SpendsHttpClient:
 
     def add_spends(self, spend: Spend) -> Spend:
         url = urljoin(self.base_url, '/api/spends/add')
-        response = self.session.post(url, json = spend.model_dump())
-        papap = spend.model_dump()
+        spend_data = {
+            'amount': spend.amount,
+            'description': spend.description,
+            'spendDate': spend.spendDate,
+            'currency': spend.currency,
+            'category': {'name': spend.category.name}
+        }
+        response = self.session.post(url, json = spend_data)
+
         response.raise_for_status()
         return Spend.model_validate(response.json())
 

@@ -16,10 +16,12 @@ def test_spending_title_exists():
 @Pages.main_page
 @TestData.category('school')
 @TestData.spends(
-    Spend(amount=106.43, description='Test spending delete', category=Category(name='school'),
-    # {'name': 'school'},
-
-          spendDate= '2025-10-19T17:39:27.955Z', currency= 'RUB')
+    Spend(amount=106.43,
+          description='Test spending delete',
+          category=Category(name='school'),
+          spendDate= '2025-10-19T17:39:27.955Z',
+          currency= 'RUB'
+          )
 )
 def test_spending_should_be_deleted_after_table_action(category, spends):
     browser.element('.MuiTable-root tbody').should(have.text('school'))
