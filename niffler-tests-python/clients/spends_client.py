@@ -2,6 +2,7 @@ from urllib.parse import urljoin
 
 import requests
 
+from models.spend import Category, SpendModel
 
 
 class SpendsHttpClient:
@@ -20,27 +21,50 @@ class SpendsHttpClient:
             }
         )
 
-    def get_categories(self):
+    def get_categories(self) -> list[Category]:
         response = self.session.get(urljoin(self.base_url, '/api/categories/all'))
-        response.raise_for_status()
+        self.raise_for_status(response)
 
-        return response.json()
+        return [Category.model_validate(item) for item in response.json()]
 
-    def add_category(self, name: str):
+    def add_category(self, name: str) -> Category:
         response = self.session.post(urljoin(self.base_url, '/api/categories/add'), json={
             'name': name
         })
-        response.raise_for_status()
+        self.raise_for_status(response)
 
-        return response.json()
+        return Category.model_validate(response.json())
 
-    def add_spends(self, body):
+    def get_spends(self) -> list[SpendModel]:
+        url = urljoin(self.base_url, '/api/spends/all')
+        response = self.session.get(url)
+        self.raise_for_status(response)
+        return [SpendModel.model_validate(item) for item in response.json()]
+
+    def add_spends(self, spend: SpendModel) -> SpendModel:
         url = urljoin(self.base_url, '/api/spends/add')
-        response = self.session.post(url, json = body)
-        response.raise_for_status()
-        return response.json()
+        spend_data = {
+            'amount': spend.amount,
+            'description': spend.description,
+            'spendDate': spend.spendDate,
+            'currency': spend.currency,
+            'category': {'name': spend.category.name}
+        }
+        response = self.session.post(url, json = spend_data)
 
-    def remove_spends(self, ids: list[int]):
+        self.raise_for_status(response)
+        return SpendModel.model_validate(response.json())
+
+    def remove_spends(self, ids: list[str]):
         url = urljoin(self.base_url, '/api/spends/remove')
         response = self.session.delete(url, params={'ids': ids})
-        response.raise_for_status()
+        self.raise_for_status(response)
+
+    @staticmethod
+    def raise_for_status(response: requests.Response):
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as e:
+            if requests.status_codes in (400, 401,404, 409, 500) :
+                e.add_note(response.text)
+                raise
