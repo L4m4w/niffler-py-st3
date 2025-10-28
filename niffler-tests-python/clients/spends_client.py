@@ -2,7 +2,7 @@ from urllib.parse import urljoin
 
 import requests
 
-from models.spend import Category, Spend
+from models.spend import Category, SpendModel
 
 
 class SpendsHttpClient:
@@ -23,7 +23,7 @@ class SpendsHttpClient:
 
     def get_categories(self) -> list[Category]:
         response = self.session.get(urljoin(self.base_url, '/api/categories/all'))
-        response.raise_for_status()
+        self.raise_for_status(response)
 
         return [Category.model_validate(item) for item in response.json()]
 
@@ -31,17 +31,17 @@ class SpendsHttpClient:
         response = self.session.post(urljoin(self.base_url, '/api/categories/add'), json={
             'name': name
         })
-        response.raise_for_status()
+        self.raise_for_status(response)
 
         return Category.model_validate(response.json())
 
-    def get_spends(self) -> list[Spend]:
+    def get_spends(self) -> list[SpendModel]:
         url = urljoin(self.base_url, '/api/spends/all')
         response = self.session.get(url)
-        response.raise_for_status()
-        return [Spend.model_validate(item) for item in response.json()]
+        self.raise_for_status(response)
+        return [SpendModel.model_validate(item) for item in response.json()]
 
-    def add_spends(self, spend: Spend) -> Spend:
+    def add_spends(self, spend: SpendModel) -> SpendModel:
         url = urljoin(self.base_url, '/api/spends/add')
         spend_data = {
             'amount': spend.amount,
@@ -52,10 +52,19 @@ class SpendsHttpClient:
         }
         response = self.session.post(url, json = spend_data)
 
-        response.raise_for_status()
-        return Spend.model_validate(response.json())
+        self.raise_for_status(response)
+        return SpendModel.model_validate(response.json())
 
     def remove_spends(self, ids: list[str]):
         url = urljoin(self.base_url, '/api/spends/remove')
         response = self.session.delete(url, params={'ids': ids})
-        response.raise_for_status()
+        self.raise_for_status(response)
+
+    @staticmethod
+    def raise_for_status(response: requests.Response):
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as e:
+            if requests.status_codes in (400, 401,404, 409, 500) :
+                e.add_note(response.text)
+                raise

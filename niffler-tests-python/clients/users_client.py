@@ -2,6 +2,7 @@ from urllib.parse import urljoin
 
 import requests
 
+from models.userdata import UserUpdateProfile
 
 
 class UsersHttpClient:
@@ -32,11 +33,11 @@ class UsersHttpClient:
 
         return response.json()
 
-    def update_user(self, body):
+    def update_user(self, body) -> UserUpdateProfile:
         url = urljoin(self.base_url, '/api/users/update')
         response = self.session.post(url, json=body)
 
         response.raise_for_status()
-        return response.json()
+        return UserUpdateProfile.model_validate(response.json())
 
 
