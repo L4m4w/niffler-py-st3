@@ -1,6 +1,10 @@
 from urllib.parse import urljoin
 
+import allure
 import requests
+from allure_commons.types import AttachmentType
+from requests_toolbelt.utils.dump import dump_response
+from requests import Response
 
 from models.spend import Category, SpendModel
 
@@ -20,13 +24,21 @@ class SpendsHttpClient:
                 'Content-Type': 'application/json'
             }
         )
+        self.session.hooks['response'].append(self.attach_response)
 
+    @staticmethod
+    def attach_response(response: Response, *args, **kwargs):
+        attachment_name = response.request.method + " " + response.request.url
+        allure.attach(dump_response(response), attachment_name, attachment_type=AttachmentType.TEXT)
+
+    @allure.step('Getting categories via http request: /api/categories/all')
     def get_categories(self) -> list[Category]:
         response = self.session.get(urljoin(self.base_url, '/api/categories/all'))
         self.raise_for_status(response)
 
         return [Category.model_validate(item) for item in response.json()]
 
+    @allure.step('Adding categories via http request: /api/categories/add')
     def add_category(self, name: str) -> Category:
         response = self.session.post(urljoin(self.base_url, '/api/categories/add'), json={
             'name': name
@@ -35,12 +47,14 @@ class SpendsHttpClient:
 
         return Category.model_validate(response.json())
 
+    @allure.step('Getting spends via http request: /api/spends/all')
     def get_spends(self) -> list[SpendModel]:
         url = urljoin(self.base_url, '/api/spends/all')
         response = self.session.get(url)
         self.raise_for_status(response)
         return [SpendModel.model_validate(item) for item in response.json()]
 
+    @allure.step('Adding spends via http request: /api/spends/add')
     def add_spends(self, spend: SpendModel) -> SpendModel:
         url = urljoin(self.base_url, '/api/spends/add')
         spend_data = {
@@ -55,6 +69,7 @@ class SpendsHttpClient:
         self.raise_for_status(response)
         return SpendModel.model_validate(response.json())
 
+    @allure.step('Removing spends by id via http request: /api/spends/remove')
     def remove_spends(self, ids: list[str]):
         url = urljoin(self.base_url, '/api/spends/remove')
         response = self.session.delete(url, params={'ids': ids})

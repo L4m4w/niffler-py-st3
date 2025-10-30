@@ -28,3 +28,6 @@ wsproto==1.2.0
 psycopg2-binary
 sqlalchemy
 sqlmodel
+
+allure-pytest
+requests-toolbelt

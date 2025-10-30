@@ -1,6 +1,11 @@
 import os
 from urllib.parse import urljoin
 
+import allure
+from allure_commons.reporter import AllureReporter
+from allure_commons.types import AttachmentType
+from allure_pytest.listener import AllureListener
+from pytest import FixtureDef, FixtureRequest
 from selene import have, by, be
 from selene.support.shared import browser
 import pytest
@@ -20,10 +25,30 @@ from models.spend import Category
 from models.userdata import UserModel, User
 
 
+@pytest.hookimpl(hookwrapper=True, trylast=True)
+def pytest_runtest_call(item):
+    yield
+    allure.dynamic.title(" ".join(item.name.split('_')[1:]).title())
+
+def allure_logger(config) -> AllureReporter:
+    listener: AllureListener = config.pluginmanager.get_plugin("allure_listener")
+    return listener.allure_logger
+
+@pytest.hookimpl(hookwrapper=True, trylast=True)
+def pytest_fixture_setup(fixturedef: FixtureDef, request):
+    yield
+    logger = allure_logger(request.config)
+    item = logger.get_last_item()
+    scope_letter = fixturedef.scope[0].upper()
+    item.name = f"[{scope_letter}]" + " ".join(fixturedef.argname.split('_')).title()
+
+
+
 @pytest.fixture(scope="session", autouse=True)
+@allure.step('Loading environment config')
 def envs() -> Envs:
     load_dotenv()
-    return Envs(
+    envs_instance = Envs(
         frontend_url=os.getenv('FRONTEND_URL'),
         gateway_url=os.getenv('GATEWAY_URL'),
         register_url=os.getenv('REGISTER_URL'),
@@ -34,7 +59,12 @@ def envs() -> Envs:
         test_password=os.getenv('TEST_PASSWORD')
     )
 
+    allure.attach(envs_instance.model_dump_json(indent=2), name= 'envs.json', attachment_type=AttachmentType.JSON)
+
+    return envs_instance
+
 @pytest.fixture(scope="session")
+@allure.step('Getting API user')
 def api_user(envs):
     # return os.getenv('TEST_USERNAME'), os.getenv('TEST_PASSWORD')
     return 'Lamaw', 'Lamaw2002'
@@ -42,57 +72,89 @@ def api_user(envs):
 @pytest.fixture(scope="function")
 def register(envs, random_user):
     username, password = random_user.username, random_user.password
-    browser.open(envs.register_url)
-    browser.element("[name=username]").type(username)
-    browser.element("[name=password]").type(password)
-    browser.element("[name=passwordSubmit]").type(password)
-    browser.element('button.form__submit').click()
+    with allure.step('Opening registration page'):
+        browser.open(envs.register_url)
+    with allure.step('Entering username: ' + username):
+        browser.element("[name=username]").type(username)
+    with allure.step('Entering password: ' + password):
+        browser.element("[name=password]").type(password)
+    with allure.step('Entering submit password: ' + password):
+        browser.element("[name=passwordSubmit]").type(password)
+    with allure.step('Submit registration'):
+        browser.element('button.form__submit').click()
 
-    return browser.driver.execute_script('return window.localStorage.getItem("id_token")')
+    token = browser.driver.execute_script('return window.localStorage.getItem("id_token")')
+    try:
+        allure.attach(token, name='token.txt', attachment_type=AttachmentType.TEXT)
+    except TypeError:
+        pass
+    return token
 
 @pytest.fixture(scope="function")
 def register_with_different_passwords(envs, random_user):
     username, password = random_user.username, random_user.password
-    browser.open(envs.register_url)
-    browser.element("[name=username]").type(username)
-    browser.element("[name=password]").type(password)
-    browser.element("[name=passwordSubmit]").type(f"{random_user.password}_1")
-    browser.element('button.form__submit').click()
-
+    with allure.step('Opening registration page'):
+        browser.open(envs.register_url)
+    with allure.step('Entering username: ' + username):
+        browser.element("[name=username]").type(username)
+    with allure.step('Entering password: ' + password):
+        browser.element("[name=password]").type(password)
+    with allure.step('Entering incorrect submit password: ' + password+'_1'):
+        browser.element("[name=passwordSubmit]").type(f"{random_user.password}_1")
+    with allure.step('Submit registration'):
+        browser.element('button.form__submit').click()
 
 @pytest.fixture(scope="function")
 def auth_with_wrong_password(envs, random_user):
     username, password = random_user.username, random_user.password
-    browser.open(envs.auth_url)
-    browser.element("[name=username]").type(username)
-    browser.element("[name=password]").type(password)
-    browser.element('button.form__submit').click()
+    with allure.step('Opening authorization page'):
+        browser.open(envs.auth_url)
+    with allure.step('Entering username: ' + username):
+        browser.element("[name=username]").type(username)
+    with allure.step('Entering password: ' + password):
+        browser.element("[name=password]").type(password)
+    with allure.step('Submit authorization'):
+        browser.element('button.form__submit').click()
 
 
 @pytest.fixture(scope="session")
 def auth(envs, api_user):
     username, password = api_user
-    browser.open(envs.frontend_url)
-    browser.element("[name=username]").type(username)
-    browser.element("[name=password]").type(password)
-    browser.element('button.form__submit').click()
+    with allure.step('Opening authorization page'):
+        browser.open(envs.auth_url)
+    with allure.step('Entering username: ' + username):
+        browser.element("[name=username]").type(username)
+    with allure.step('Entering password: ' + password):
+        browser.element("[name=password]").type(password)
+    with allure.step('Submit authorization'):
+        browser.element('button.form__submit').click()
     try:
-        browser.element(by.id("spendings")).should(be.visible)
+        with allure.step('Check is user registered'):
+            browser.element(by.id("spendings")).should(be.visible)
 
     except Exception as e:
-        browser.open(envs.register_url)
-        browser.element("[name=username]").type(username)
-        browser.element("[name=password]").type(password)
-        browser.element("[name=passwordSubmit]").type(password)
-        browser.element('button.form__submit').click()
+        with allure.step('User is not registered \n\n Opening registration page'):
+            browser.open(envs.register_url)
+        with allure.step('Entering username: ' + username):
+            browser.element("[name=username]").type(username)
+        with allure.step('Entering password: ' + password):
+            browser.element("[name=password]").type(password)
+        with allure.step('Entering submit password: ' + password):
+            browser.element("[name=passwordSubmit]").type(password)
+        with allure.step('Submit registration'):
+            browser.element('button.form__submit').click()
 
-    return browser.driver.execute_script('return window.localStorage.getItem("id_token")')
+    token = browser.driver.execute_script('return window.localStorage.getItem("id_token")')
+    allure.attach(token, name='token.txt', attachment_type=AttachmentType.TEXT)
+    return token
 
 @pytest.fixture()
+@allure.step('Opening main page')
 def main_page(auth, envs):
     browser.open(envs.frontend_url)
 
 @pytest.fixture()
+@allure.step('Opening profile page')
 def profile_page(auth, envs):
     browser.open(urljoin(envs.frontend_url, '/profile'))
 
