@@ -1,6 +1,7 @@
 import logging
 from wsgiref.util import application_uri
 
+import allure
 import pytest
 from pytest import Parser  # noqa: PT013
 from selene.support.shared import browser
@@ -62,6 +63,7 @@ def data_factory():
     logger.info(f"Test data generation stats: {stats}")
 
 @pytest.fixture(scope='function')
+@allure.step('Creating random user credentials (username, password)')
 def random_user(data_factory) -> UserData:
     return data_factory.create_user_credentials_data()
 
