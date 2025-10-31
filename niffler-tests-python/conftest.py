@@ -1,3 +1,4 @@
+import json
 import os
 from urllib.parse import urljoin
 
@@ -59,7 +60,10 @@ def envs() -> Envs:
         test_password=os.getenv('TEST_PASSWORD')
     )
 
-    allure.attach(envs_instance.model_dump_json(indent=2), name= 'envs.json', attachment_type=AttachmentType.JSON)
+    safe_envs = envs_instance.get_safe_dict_for_log()
+    allure.attach(json.dumps(safe_envs, indent=2), name='envs.json', attachment_type=AttachmentType.JSON)
+
+    # allure.attach(envs_instance.model_dump_json(indent=2), name= 'envs.json', attachment_type=AttachmentType.JSON)
 
     return envs_instance
 
