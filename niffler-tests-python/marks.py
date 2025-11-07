@@ -16,3 +16,4 @@ class TestData:
     spends = lambda x: pytest.mark.parametrize('spends', [x], indirect=True, ids=lambda param: param.description)
     update_profile = lambda x: pytest.mark.parametrize('update_profile', [x], indirect=True)
     get_user_data_from_db = lambda x: pytest.mark.parametrize('get_user_data_from_db', [x], indirect=True)
+    get_category_data_from_db = lambda x: pytest.mark.parametrize('get_category_data_from_db', [x], indirect=True)

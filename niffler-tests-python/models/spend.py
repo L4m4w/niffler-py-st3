@@ -1,9 +1,7 @@
-from datetime import datetime
 from typing import Optional
+import uuid
 
 from pydantic import BaseModel
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.ext.mutable import MutableDict
 from sqlmodel import SQLModel, Field, Relationship
 
 class SpendCategoryLink(SQLModel, table=True):
@@ -11,7 +9,7 @@ class SpendCategoryLink(SQLModel, table=True):
     category_id: str | None = Field(default=None, foreign_key="category.id", primary_key=True)
 
 class Category(SQLModel, table=True):
-    id: Optional[str] = Field(primary_key=True)
+    id: Optional[uuid.UUID] = Field(primary_key=True)
     name: str
     username: Optional[str]
     archived: Optional[bool]
@@ -39,3 +37,8 @@ class SpendModel(BaseModel):
     currency: str
     username: Optional[str] = Field(default=None)
 
+class CategoryModel(BaseModel):
+    id: Optional[str] = Field(primary_key=True)
+    name: str
+    username: Optional[str]
+    archived: Optional[bool]

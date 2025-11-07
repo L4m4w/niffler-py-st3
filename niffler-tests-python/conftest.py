@@ -1,30 +1,23 @@
 import json
 import os
-from urllib.parse import urljoin
 
 import allure
 from allure_commons.reporter import AllureReporter
 from allure_commons.types import AttachmentType
 from allure_pytest.listener import AllureListener
-from pytest import FixtureDef, FixtureRequest
-from selene import have, by, be
+from pytest import FixtureDef
+from selene import by, be
 from selene.support.shared import browser
 import pytest
 
 from dotenv import load_dotenv
-from selenium.common import NoSuchElementException
-from trio import current_effective_deadline
 
-from clients.users_client import UsersHttpClient
-from database.spend_db import SpendDB
-from database.userdata_db import UserDataDB
-from e2e.web.conftest import random_user
+from tests.e2e.web.conftest import random_user
+from fixtures.auth_fixtures import api_user
 
-from clients.spends_client import SpendsHttpClient
 from models.config import Envs
-from models.spend import Category
-from models.userdata import UserModel, User
 
+pytest_plugins=['fixtures.auth_fixtures', 'fixtures.client_fixtures', 'fixtures.pages_fixtures']
 
 @pytest.hookimpl(hookwrapper=True, trylast=True)
 def pytest_runtest_call(item):
@@ -54,6 +47,7 @@ def envs() -> Envs:
         gateway_url=os.getenv('GATEWAY_URL'),
         register_url=os.getenv('REGISTER_URL'),
         auth_url=os.getenv('AUTH_URL'),
+        auth_secret=os.getenv('AUTH_SECRET'),
         spend_db_url=os.getenv('SPEND_DB_URL'),
         userdata_db_url=os.getenv('USERDATA_DB_URL'),
         test_username=os.getenv('TEST_USERNAME'),
@@ -67,11 +61,6 @@ def envs() -> Envs:
 
     return envs_instance
 
-@pytest.fixture(scope="session")
-@allure.step('Getting API user')
-def api_user(envs):
-    # return os.getenv('TEST_USERNAME'), os.getenv('TEST_PASSWORD')
-    return 'Lamaw', 'Lamaw2002'
 
 @pytest.fixture(scope="function")
 def register(envs, random_user):
@@ -122,7 +111,7 @@ def auth_with_wrong_password(envs, random_user):
 
 
 @pytest.fixture(scope="session")
-def auth(envs, api_user):
+def auth_front_token(envs: Envs, api_user):
     username, password = api_user
     with allure.step('Opening authorization page'):
         browser.open(envs.auth_url)
@@ -151,83 +140,16 @@ def auth(envs, api_user):
     token = browser.driver.execute_script('return window.localStorage.getItem("id_token")')
     allure.attach(token, name='token.txt', attachment_type=AttachmentType.TEXT)
     return token
+#
+# @pytest.fixture(scope="session")
+# def auth_front_token(envs: Envs):
+#     browser.open(envs.frontend_url)
+#     browser.element('a[href*=redirect]').click()
+#     browser.element('input[name=username]').set_value(envs.test_username)
+#     browser.element('input[name=password]').set_value(envs.test_password)
+#     browser.element('button[type=submit]').click()
+#     token = browser.driver.execute_script('return window.sessionStorage.getItem("id_token")')
+#     allure.attach(token, name="token.txt", attachment_type=AttachmentType.TEXT)
+#     return token
 
-@pytest.fixture()
-@allure.step('Opening main page')
-def main_page(auth, envs):
-    browser.open(envs.frontend_url)
-
-@pytest.fixture()
-@allure.step('Opening profile page')
-def profile_page(auth, envs):
-    browser.open(urljoin(envs.frontend_url, '/profile'))
-
-@pytest.fixture()
-def registration_page(register, envs):
-    ...
-
-@pytest.fixture()
-def registration_page_with_different_passwords(register_with_different_passwords, envs):
-    ...
-
-@pytest.fixture()
-def auth_page_with_wrong_password(auth_with_wrong_password, envs):
-    ...
-
-@pytest.fixture()
-def auth_page(auth, envs):
-    ...
-
-@pytest.fixture(scope="session")
-def spends_client(envs, auth) -> SpendsHttpClient:
-    return SpendsHttpClient(envs.gateway_url, auth)
-
-@pytest.fixture(scope="session")
-def users_client(envs, auth) -> UsersHttpClient:
-    return UsersHttpClient(envs.gateway_url, auth)
-
-@pytest.fixture(params=[])
-def update_profile(request, users_client):
-    profile = users_client.update_user(request.param)
-    yield profile
-    users_client.update_user({'fullname': '6666'})
-    users_client.update_user({'currency': 'RUB'})
-
-@pytest.fixture()
-def get_user_profile(users_client):
-    profile = users_client.get_current_user()
-    return profile
-
-@pytest.fixture(scope="session")
-def spend_db(envs) -> SpendDB:
-    return SpendDB(envs.spend_db_url)
-
-@pytest.fixture(scope="session")
-def userdata_db(envs) -> UserDataDB:
-    return UserDataDB(envs.userdata_db_url)
-
-
-@pytest.fixture(params=[])
-def category(request, spends_client, spend_db):
-    category_name = request.param
-    category = spends_client.add_category(category_name)
-    yield category_name
-    spend_db.delete_category(category.id)
-
-@pytest.fixture(params=[])
-def get_user_data_from_db(request, userdata_db) -> User:
-    username = request.param
-    user_data = userdata_db.get_user_data(username)
-    return User.model_validate(user_data)
-
-@pytest.fixture(params=[])
-def spends(request, spends_client):
-    spend_data = request.param
-
-    test_spend = spends_client.add_spends(spend_data)
-
-    yield test_spend
-    all_spends = spends_client.get_spends()
-    if test_spend.id in [spend.id for spend in all_spends]:
-        spends_client.remove_spends([test_spend.id])
 
