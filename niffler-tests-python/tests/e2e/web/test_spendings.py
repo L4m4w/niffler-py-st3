@@ -7,6 +7,8 @@ from selene import have, by, be
 
 from marks import Pages, TestData
 from models.spend import SpendModel, Category
+from models.enums import CategoryEnum
+
 
 @allure.epic("niffler-spend")
 @allure.feature("Main page")
@@ -19,11 +21,11 @@ def test_spending_title_exists():
 @allure.feature("Main page")
 @allure.story("Updating Main page data")
 @Pages.main_page
-@TestData.category('school')
+@TestData.category(CategoryEnum.SCHOOL)
 @TestData.spends(
     SpendModel(amount=106.43,
                description='Test spending delete',
-               category=Category(name='school'),
+               category=Category(name=CategoryEnum.SCHOOL),
                spendDate= '2025-10-19T17:39:27.955Z',
                currency= 'RUB'
                )
