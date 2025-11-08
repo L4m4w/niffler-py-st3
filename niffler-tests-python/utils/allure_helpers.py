@@ -6,7 +6,7 @@ import allure
 import curlify
 from allure_commons.types import AttachmentType
 from requests import Response
-
+from jinja2 import Template, Environment, PackageLoader,select_autoescape
 
 
 def allure_attach_request(function):
@@ -16,27 +16,67 @@ def allure_attach_request(function):
         with allure.step(f"{method} {url}"):
             response: Response = function(*args, **kwargs)
             curl = curlify.to_curl(response.request)
-            logging.debug(curl)
-            allure.attach(
-                body=curl,
-                name='Request curl',
-                attachment_type=AttachmentType.TEXT,
-                extension='.txt'
+
+            env = Environment(
+                loader=PackageLoader(".../resources"),
+                autoescape=select_autoescape()
             )
-            try:
+            template = env.get_template("http-request.tpl")
+
+            with allure.step(f"{method} {url}"):
+
+                response: Response = function(*args, **kwargs)
+                curl = curlify.to_curl(response.request)
+
+                prepare_render = {
+                    "request": response.request,
+                    "curl": curl,
+                }
+
+                logging.debug(curl)
+
+                render = template.render(prepare_render)
+
                 allure.attach(
-                    body=json.dumps(response.json(), indent=4).encode('utf8'),
-                    name=f"Response body {response.status_code}",
-                    attachment_type=AttachmentType.JSON,
-                    extension='.json'
+                    body=render,
+                    name=f"Request",
+                    attachment_type=AttachmentType.HTML,
+                    extension=".html"
                 )
-                logging.debug(response.text)
-            except JSONDecodeError:
+
+
+            try:
+                _response = json.dumps(response.json(), indent=4).encode('utf8')
+                prepare_render = {
+                    "response": _response
+                }
+
+                logging.debug(_response)
+
+                render = template.render(prepare_render)
+
                 allure.attach(
-                    body=response.text.encode('utf8'),
+                    body=render,
+                    name=f"Response body {response.status_code}",
+                    attachment_type=AttachmentType.HTML,
+                    extension=".html"
+                )
+
+            except JSONDecodeError:
+                _response = response.text.encode('utf8')
+                prepare_render = {
+                    "response": _response
+                }
+
+                logging.debug(_response)
+
+                render = template.render(prepare_render)
+
+                allure.attach(
+                    body=render,
                     name=f"Response text {response.status_code}",
-                    attachment_type=AttachmentType.TEXT,
-                    extension='.txt'
+                    attachment_type=AttachmentType.HTML,
+                    extension=".html"
                 )
 
             # allure.attach(

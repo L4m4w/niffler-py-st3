@@ -34,3 +34,5 @@ requests-toolbelt
 
 curlify
 pkce
+
+jinja2
