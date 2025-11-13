@@ -36,3 +36,5 @@ curlify
 pkce
 
 jinja2
+pytest-xdist
+filelock
