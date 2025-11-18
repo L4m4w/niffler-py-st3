@@ -51,7 +51,8 @@ def envs() -> Envs:
         spend_db_url=os.getenv('SPEND_DB_URL'),
         userdata_db_url=os.getenv('USERDATA_DB_URL'),
         test_username=os.getenv('TEST_USERNAME'),
-        test_password=os.getenv('TEST_PASSWORD')
+        test_password=os.getenv('TEST_PASSWORD'),
+        kafka_address=os.getenv("KAFKA_ADDRESS")
     )
 
     safe_envs = envs_instance.get_safe_dict_for_log()

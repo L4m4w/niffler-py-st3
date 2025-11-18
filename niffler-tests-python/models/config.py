@@ -11,6 +11,7 @@ class Envs(BaseModel):
     userdata_db_url: str
     test_username: str
     test_password: str
+    kafka_address: str
 
     def get_safe_dict_for_log(self) -> Dict[str, Any]:
         data = self.model_dump()

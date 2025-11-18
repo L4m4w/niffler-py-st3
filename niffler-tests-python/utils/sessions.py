@@ -7,13 +7,14 @@ from utils.allure_helpers import allure_attach_request
 
 def raise_for_status(function):
     def wrapper(*args, **kwargs):
+        li = function
         response = function(*args, **kwargs)
-        try:
-            response.raise_for_status()
-        except requests.HTTPError as e:
-            if response.status_code in (400, 401, 404, 409, 500):
-                e.add_note(response.text)
-                raise
+        # try:
+        #     response.raise_for_status()
+        # except requests.HTTPError as e:
+        #     if response.status_code in (400, 401, 404, 409, 500):
+        #         e.add_note(response.text)
+        #         raise
         return response
     return wrapper
 
@@ -27,10 +28,24 @@ class BaseSession(Session):
     @raise_for_status
     @allure_attach_request
     def request(self, method, url, **kwargs):
-        """Logging request"""
+
         url = self.base_url + url
         response = super().request(method, url, **kwargs)
         return response
+
+class SoapSession(Session):
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self.base_url = kwargs.pop('base_url', '')
+
+    @raise_for_status
+    @allure_attach_request
+    def request(self, method, url, **kwargs):
+
+        url = self.base_url + url
+        response = super().request(method, url, **kwargs)
+        return response
+
 
 
 class AuthSession(Session):

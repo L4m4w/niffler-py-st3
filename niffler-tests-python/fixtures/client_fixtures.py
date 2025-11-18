@@ -1,5 +1,6 @@
 import pytest
 
+from clients.soap_client import SoapClient
 from clients.spends_client import SpendsHttpClient
 from clients.users_client import UsersHttpClient
 from database.spend_db import SpendDB
@@ -17,6 +18,9 @@ def spends_client(envs, auth_front_token) -> SpendsHttpClient:
 def users_client(envs, auth_front_token) -> UsersHttpClient:
     return UsersHttpClient(envs, auth_front_token)
 
+@pytest.fixture(scope="session")
+def soap_client() -> SoapClient:
+    return SoapClient(base_url='http://webservices.oorsprong.org/websamples.countryinfo/CountryInfoService.wso')
 
 @pytest.fixture(scope="session")
 def spend_db(envs) -> SpendDB:

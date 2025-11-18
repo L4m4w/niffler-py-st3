@@ -38,3 +38,7 @@ pkce
 jinja2
 pytest-xdist
 filelock
+grpcio-tools
+
+confluent_kafka
+xmlschema

@@ -16,3 +16,6 @@ class GetUsers(BaseModel):
     @property
     def json(self) -> dict:
         return self.model_dump()
+
+class UserName(BaseModel):
+    username: str

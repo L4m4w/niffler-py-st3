@@ -4,7 +4,7 @@ import pkce
 
 from models.config import Envs
 from models.oauth import OAuthRequest
-from utils.sessions import AuthSession
+from utils.sessions import AuthSession, BaseSession
 
 
 class OAuthClient:
@@ -68,3 +68,39 @@ class OAuthClient:
 
         self.token = token_response.json().get("access_token", None)
         return self.token
+
+
+class RegisterClient:
+    session: BaseSession
+    base_url: str
+
+    def __init__(self, env: Envs):
+        self.session = BaseSession(base_url='http://auth.niffler.dc:9000')
+        # self.redirect_url = env.frontend_url + '/authorize'
+
+    def register(self, username, password):
+        self.session.get(
+            url=f"",
+            params={
+                "redirect_uri": "http://auth.niffler.dc:9000/register",
+            },
+            allow_redirects=True
+        )
+
+        result = self.session.post(
+            url=f"/register",
+            data={
+                "username": username,
+                "password": password,
+                "passwordSubmit": password,
+                "_csrf": self._get_first_cookie("XSRF-TOKEN")
+            },
+            allow_redirects=True
+        )
+        return result
+
+    def _get_first_cookie(self, cookie_name):
+        for cookie in self.session.cookies:
+            if cookie.name == cookie_name:
+                return cookie.value
+        return None

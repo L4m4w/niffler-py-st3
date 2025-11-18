@@ -17,28 +17,30 @@ def allure_attach_request(function):
             response: Response = function(*args, **kwargs)
             curl = curlify.to_curl(response.request)
 
-            env = Environment(
-                loader=PackageLoader(".../resources"),
-                autoescape=select_autoescape()
-            )
-            template = env.get_template("http-request.tpl")
+            # env = Environment(
+            #     loader=PackageLoader(".../resources"),
+            #     autoescape=select_autoescape()
+            # )
+            # template = env.get_template("http-request.tpl")
 
             with allure.step(f"{method} {url}"):
 
                 response: Response = function(*args, **kwargs)
                 curl = curlify.to_curl(response.request)
 
-                prepare_render = {
-                    "request": response.request,
-                    "curl": curl,
-                }
+                # prepare_render = {
+                #     "request": response.request,
+                #     "curl": curl,
+                # }
 
                 logging.debug(curl)
 
-                render = template.render(prepare_render)
+                # render = template.render(prepare_render)
 
                 allure.attach(
-                    body=render,
+                    # body=render,
+                    body=curl,
+
                     name=f"Request",
                     attachment_type=AttachmentType.HTML,
                     extension=".html"
@@ -47,16 +49,17 @@ def allure_attach_request(function):
 
             try:
                 _response = json.dumps(response.json(), indent=4).encode('utf8')
-                prepare_render = {
-                    "response": _response
-                }
+                # prepare_render = {
+                #     "response": _response
+                # }
 
                 logging.debug(_response)
 
-                render = template.render(prepare_render)
+                # render = template.render(prepare_render)
 
                 allure.attach(
-                    body=render,
+                    # body=render,
+                    body=_response,
                     name=f"Response body {response.status_code}",
                     attachment_type=AttachmentType.HTML,
                     extension=".html"
@@ -64,16 +67,17 @@ def allure_attach_request(function):
 
             except JSONDecodeError:
                 _response = response.text.encode('utf8')
-                prepare_render = {
-                    "response": _response
-                }
+                # prepare_render = {
+                #     "response": _response
+                # }
 
                 logging.debug(_response)
 
-                render = template.render(prepare_render)
+                # render = template.render(prepare_render)
 
                 allure.attach(
-                    body=render,
+                    body=_response,
+                    # body=render,
                     name=f"Response text {response.status_code}",
                     attachment_type=AttachmentType.HTML,
                     extension=".html"
