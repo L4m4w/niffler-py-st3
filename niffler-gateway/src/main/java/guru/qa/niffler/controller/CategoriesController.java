@@ -51,7 +51,7 @@ public class CategoriesController {
 
   @PatchMapping("/update")
   public CategoryJson updateCategory(@AuthenticationPrincipal Jwt principal,
-                                     @RequestBody CategoryJson category) {
+                                     @Valid @RequestBody CategoryJson category) {
     String username = principal.getClaim("sub");
     return spendClient.updateCategory(new CategoryJson(
         category.id(),
